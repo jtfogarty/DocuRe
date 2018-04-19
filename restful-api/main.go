@@ -30,6 +30,7 @@ func main() {
 	{
 		v1.GET("/es_info", getESinfo)
 		//		v1.GET("/tree_json", getTreeJSON)
+		v1.GET("/get_indexes", getIndexes)
 	}
 	router.Run()
 
@@ -41,6 +42,10 @@ type (
 		Name        string `json:"name"`
 		ClusterName string `json:"clustername"`
 		Status      string `json:"status"`
+	}
+	esIndexList struct {
+		Name   string `json:"name"`
+		Status string `json:"status"`
 	}
 )
 
@@ -60,7 +65,7 @@ func getESinfo(c *gin.Context) {
 		// Handle error
 		panic(err)
 	}
-	res, err := client.ClusterHealth().Do(context.TODO())
+	res, err := client.ClusterHealth().Do(ctx)
 	if err != nil {
 		// Handle error
 		panic(err)
@@ -69,5 +74,39 @@ func getESinfo(c *gin.Context) {
 	esInfo = esInfoJSON{Version: info.Version.Number, Name: info.Name, ClusterName: info.ClusterName, Status: res.Status}
 
 	c.JSON(http.StatusCreated, gin.H{"status": http.StatusOK, "data": esInfo})
+	/* 	client.Delete().Do(ctx)
+	   	res1, err := client.Delete().Do(ctx)
+	   	if err != nil {
+	   		// Handle error
+	   		panic(err)
+	   	}
+	   	println(res1.Result) */
+}
 
+func getIndexes(c *gin.Context) {
+	//ctx := context.Background()
+	var index []esIndexList
+	client, err := elastic.NewClient()
+	if err != nil {
+		// Handle error
+		panic(err)
+	}
+
+	names, err := client.IndexNames()
+	if err != nil {
+		// Handle error
+		panic(err)
+	}
+	for _, iname := range names {
+		index = append(index, esIndexList{Name: iname, Status: "OK"})
+		//fmt.Printf("%s\n", name)
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"status": http.StatusOK, "data": index})
+	/* 	res2, err := client.Delete().Do(ctx)
+	   	if err != nil {
+	   		// Handle error
+	   		panic(err)
+	   	}
+	   	println(res2.Result) */
 }
