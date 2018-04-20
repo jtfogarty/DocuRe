@@ -1,0 +1,15 @@
+
+Helpful for passing connection to es 
+https://stackoverflow.com/questions/34046194/how-to-pass-arguments-to-router-handlers-in-golang-using-gin-web-framework
+
+This has test code as well
+https://sourcegraph.com/github.com/olivere/elastic@6aa9e8e8e7ac38cd04d07d2f5024cb11d540aa02/-/blob/cluster_health_test.go#L81:24
+
+Context
+https://medium.com/@cep21/how-to-correctly-use-context-context-in-go-1-7-8f2c0fafdf39
+
+go rest example
+https://medium.com/@etiennerouzeaud/how-to-create-a-basic-restful-api-in-go-c8e032ba3181
+
+Validate go request
+https://medium.com/@thedevsaddam/an-easy-way-to-validate-go-request-c15182fd11b1

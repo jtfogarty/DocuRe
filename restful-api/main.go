@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -31,6 +33,7 @@ func main() {
 		v1.GET("/es_info", getESinfo)
 		//		v1.GET("/tree_json", getTreeJSON)
 		v1.GET("/get_indexes", getIndexes)
+		v1.GET("/get_book_chpt/:index/:book/:chpt", getBookChapter)
 	}
 	router.Run()
 
@@ -46,6 +49,20 @@ type (
 	esIndexList struct {
 		Name   string `json:"name"`
 		Status string `json:"status"`
+	}
+	esBookChapter struct {
+		TookInMillis int64   `json:"tookinmills"`
+		TotalHits    int64   `json:"totalhits"`
+		Index        string  `json:"index"`
+		Verses       []verse `json:"verses"`
+	}
+	verse struct {
+		VerseNo   string `json:"verse_no"`
+		TextEntry string `json:"text_entry"`
+		LineID    string `json:"line_id"`
+		Book      string `json:"book"`
+		ChapterNo string `json:"chapter_no"`
+		Type      string `json:"type"`
 	}
 )
 
@@ -86,7 +103,7 @@ func getESinfo(c *gin.Context) {
 func getIndexes(c *gin.Context) {
 	//ctx := context.Background()
 	var index []esIndexList
-	client, err := elastic.NewClient()
+	client, err := elastic.NewClient(elastic.SetURL("http://localhost:9200"))
 	if err != nil {
 		// Handle error
 		panic(err)
@@ -109,4 +126,53 @@ func getIndexes(c *gin.Context) {
 	   		panic(err)
 	   	}
 	   	println(res2.Result) */
+}
+
+func getBookChapter(c *gin.Context) {
+	var bookChapter esBookChapter
+	var vrs verse
+	ctx := context.Background()
+	client, err := elastic.NewClient(elastic.SetURL("http://localhost:9200"))
+	if err != nil {
+		// Handle error
+		panic(err)
+	}
+
+	qb := elastic.NewMatchQuery("book", c.Param("book"))
+	bq := elastic.NewBoolQuery().Must(qb)
+	bq.Must(elastic.NewMatchQuery("chapter_no", c.Param("chpt")))
+
+	searchResult, err := client.Search().
+		Index(c.Param("index")). // search in index "twitter"
+		Query(bq).               // specify the query
+		Sort("line_id", true).   // sort by "user" field, ascending
+		//FilterPath("type", "verse").
+		From(0).Size(100). // take documents 0-9
+		Pretty(true).      // pretty print request and response JSON
+		Do(ctx)            // execute
+	if err != nil {
+		// Handle error
+		panic(err)
+	}
+
+	fmt.Printf("Found a total of %d verses\n", searchResult.Hits.TotalHits)
+
+	bookChapter.TookInMillis = searchResult.TookInMillis
+
+	bookChapter.TotalHits = searchResult.Hits.TotalHits
+
+	bookChapter.Index = c.Param("index")
+
+	for _, hit := range searchResult.Hits.Hits {
+		// hit.Index contains the name of the index
+		err := json.Unmarshal(*hit.Source, &vrs)
+		if err != nil {
+			panic(err)
+		}
+
+		//		s := string(data)
+		//		sU, _ := strconv.Unquote(s)
+		bookChapter.Verses = append(bookChapter.Verses, vrs)
+	}
+	c.JSON(http.StatusCreated, gin.H{"status": http.StatusOK, "data": bookChapter})
 }
