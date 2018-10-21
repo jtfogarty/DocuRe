@@ -1,0 +1,8 @@
+responsiveness target for v1
+    mobile friendly, or mobile view as-is
+
+
+...
+tech
+tech arch
+    i.e. pers drwr to main
