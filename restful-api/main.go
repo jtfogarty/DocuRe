@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/olivere/elastic"
@@ -14,15 +14,20 @@ import (
 //	_ "github.com/lib/pq"
 
 //var db *pq.db
+var env sysEnv
 
-/* func init() {
+func init() {
 	//open a db connection
-	var err error
-	db, err := sql.Open("postgres", "user=theUser dbname=theDbName sslmode=verify-full")
-	if err != nil {
-  		panic(err)
-	}
-} */
+
+	env.ESPort = os.Getenv("ES_PORT_NO")
+	env.ESServer = os.Getenv("ES_SERVER_NAME")
+
+	/* 	var err error
+		db, err := sql.Open("postgres", "user=theUser dbname=theDbName sslmode=verify-full")
+		if err != nil {
+	  		panic(err)
+		} */
+}
 
 func main() {
 
@@ -64,6 +69,10 @@ type (
 		ChapterNo string `json:"chapter_no"`
 		Type      string `json:"type"`
 	}
+	sysEnv struct {
+		ESPort   string
+		ESServer string
+	}
 )
 
 func getESinfo(c *gin.Context) {
@@ -77,7 +86,7 @@ func getESinfo(c *gin.Context) {
 		// Handle error
 		panic(err)
 	}
-	info, code, err := client.Ping("http://127.0.0.1:9200").Do(ctx)
+	info, code, err := client.Ping("http://" + env.ESServer + ":" + env.ESPort).Do(ctx)
 	if (err != nil) && (code != 200) {
 		// Handle error
 		panic(err)
@@ -137,7 +146,7 @@ func getBookChapter(c *gin.Context) {
 		// Handle error
 		panic(err)
 	}
-
+	
 	qb := elastic.NewMatchQuery("book", c.Param("book"))
 	bq := elastic.NewBoolQuery().Must(qb)
 	bq.Must(elastic.NewMatchQuery("chapter_no", c.Param("chpt")))
@@ -147,7 +156,7 @@ func getBookChapter(c *gin.Context) {
 		Query(bq).               // specify the query
 		Sort("line_id", true).   // sort by "user" field, ascending
 		//FilterPath("type", "verse").
-		From(0).Size(100). // take documents 0-9
+		From(0).Size(200). // take documents 0-9
 		Pretty(true).      // pretty print request and response JSON
 		Do(ctx)            // execute
 	if err != nil {
@@ -155,7 +164,7 @@ func getBookChapter(c *gin.Context) {
 		panic(err)
 	}
 
-	fmt.Printf("Found a total of %d verses\n", searchResult.Hits.TotalHits)
+	//fmt.Printf("Found a total of %d verses\n", searchResult.Hits.TotalHits)
 
 	bookChapter.TookInMillis = searchResult.TookInMillis
 
